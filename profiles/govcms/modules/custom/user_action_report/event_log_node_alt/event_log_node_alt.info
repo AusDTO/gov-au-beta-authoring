@@ -1,0 +1,13 @@
+name = Event Log Node events (alt)
+description = "Logs node CRUD events performed by the user (without node info)."
+core = 7.x
+package = Statistics
+dependencies[] = event_log
+
+
+; Information added by Drupal.org packaging script on 2016-02-24
+version = "7.x-2.0-beta9"
+core = "7.x"
+project = "govcms"
+datestamp = "1456358343"
+

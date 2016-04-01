@@ -1,0 +1,11 @@
+name = Menu Block
+description = Provides menu_block implemenation
+core = 7.x
+dependencies[] = menu_block
+
+; Information added by Drupal.org packaging script on 2016-02-24
+version = "7.x-2.0-beta9"
+core = "7.x"
+project = "govcms"
+datestamp = "1456358343"
+

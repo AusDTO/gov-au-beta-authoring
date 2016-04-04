@@ -1,0 +1,271 @@
+<?php
+/**
+ * Implements hook_help().
+ *
+ * Displays help and module information.
+ */
+function govau_push_help($path, $arg)
+{
+    switch ($path) {
+        case 'admin/help#govau_push':
+            $output = '';
+            $output .= '<h3>' . t('About') . '</h3>';
+            $output .= '<p>' . t('Post content to GOV.AU API') . '</p>';
+            $output .= '</ul>';
+            return $output;
+    }
+}
+
+/**
+ * Implements hook_menu().
+ *
+ * @see govau_push_menu_load()
+ */
+function govau_push_menu()
+{
+    $items = array();
+
+    $items['admin/govau-submission-results/resend/%'] = array(
+        'title' => t('Post again to GOV.AU API'),
+        'page callback' => 'govau_push_resend',
+        'page arguments' => array('id'),
+        'type' => MENU_LOCAL_TASK,
+        'access arguments' => array(TRUE),
+        'access callback' => user_access('administer site configuration'),
+    );
+
+    $items['admin/config/content/govau_push'] = array(
+        'title' => 'GOV.AU Push module settings',
+        'description' => 'GOV.AU Push module settings',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('govau_push_admin_form'),
+        'access arguments' => array('access administration pages'),
+        'type' => MENU_NORMAL_ITEM,
+    );
+    return $items;
+}
+
+function govau_push_admin_form()
+{
+    $form = array();
+
+    $form['govau_api_url'] = array(
+        '#type' => 'textfield',
+        '#title' => t('GOV.AU API URL'),
+        '#default_value' => variable_get('govau_api_url'),
+        '#size' => 255,
+        '#maxlength' => 255,
+        '#description' => t("GOV.AU API URL"),
+        '#required' => TRUE,
+    );
+
+    return system_settings_form($form);
+}
+
+function govau_push_admin_validate($form, &$form_state)
+{
+
+
+}
+
+function govau_push_list()
+{
+
+}
+
+function govau_push_views_api()
+{
+    return array('api' => 3.0);
+}
+
+function submit_key_value($payload)
+{
+
+    $url = variable_get("govau_api_url");
+
+// Acceptable server response codes.
+    $benign_reponse_codes = array('200', '301', '302', '307');
+
+// JSON Encode the payload.
+
+    $headers = array('Content-Type' => 'application/json');
+
+// save to DB
+    $target = Array();
+// TODO: Like in webform, this is not race-condition safe.
+// Switch to using transactions as well?
+    $next_id_query = db_select('govau_push_submissions');
+    $next_id_query->addExpression('MAX(id) + 1', 'id');
+    $target['id'] = $next_id_query->execute()->fetchField();
+    if ($target['id'] == NULL) {
+        $target['id'] = 1;
+    }
+    $target['timestamp'] = time();
+    $target['url'] = $url;
+    $target['header'] = json_encode($headers);
+    $target['payload'] = $payload;
+    $target['status'] = 'pending';
+    $target['result'] = '-';
+    $success = drupal_write_record('govau_push_submissions', $target);
+
+// Write a log if we weren't able to save the target successfully.
+    if ($success === FALSE) {
+        watchdog('webform_remote_post', 'There was an error writing a new remote post target to the database.', array(), WATCHDOG_ERROR);
+    }
+// Repost data to each target. Begin by setting the
+// options for drupal_http_request().
+    $drupal_http_request_options = array(
+        'method' => 'POST',
+        'data' => $payload,
+        'timeout' => 15,
+        'headers' => $headers,
+    );
+
+// Where the magic happens:
+    $request = drupal_http_request($url, $drupal_http_request_options);
+    $result = json_decode($request->data);
+// Log any errors.
+    if (!isset($request->code) or !in_array($request->code, $benign_reponse_codes)
+        or !isset($result->success) or !$result->success
+    ) {
+        $log_msg = 'A remote post to %url  returned a ';
+        $log_msg .= '\'%code\' code, which is a different HTTP response code ';
+        $log_msg .= 'than expected. Please make sure that the remote post URL ';
+        $log_msg .= 'is correct in the Remote Posts webform settings, and that ';
+        $log_msg .= 'the post was received in the remote system. ';
+        $log_msg .= $payload;
+        $log_msg .= isset($request->data) ? $request->data : $request->error;
+
+        watchdog(
+            'govau_push',
+            $log_msg,
+            array(
+                '%url' => $url,
+                '%code' => $request->code,
+            ),
+            WATCHDOG_WARNING);
+// Update the remote post target:
+        db_update('govau_push_submissions')
+            ->fields(array(
+                'status' => 'failed',
+                'result' => isset($request->data) ? 'Data:' . $request->data . 'Error:' . $request->error : 'Error:' . $request->error,
+            ))
+            ->condition('id', $target['id'])
+            ->execute();
+    } else {
+
+// Update the remote post target:
+        db_update('govau_push_submissions')
+            ->fields(array(
+                'status' => 'complete',
+                'result' => $request->data
+            ))
+            ->condition('id', $target['id'])
+            ->execute();
+    }
+}
+
+/**
+ * Implements hook_perm().
+ */
+function govau_push_permission()
+{
+    return array(
+        'admin webform remote posts' => array(
+            'title' => t('Admin GOV.AU pushes'),
+            'description' => t('Grants access to the GOV.AU pushes settings'),
+        ),
+    );
+}
+/**
+ * Mark objects as being objects.
+ */
+function json_encode_objects($var) {
+    if (is_object($var)) {
+        $var = (array)$var;
+        $var['#node_export_object'] = '1';
+    }
+    if (is_array($var)) {
+        foreach ($var as $key => $value) {
+            $var[$key] = json_encode_objects($value);
+        }
+    }
+    return $var;
+}
+
+function govau_push_workbench_moderation_transition($node, $previous_state, $new_state) {
+    if ($new_state == "published") {
+        submit_key_value(
+            drupal_json_encode(
+                json_encode_objects(
+                    [node_export_prepare_node($node)]
+                )
+                [0]
+            )
+        );
+    }
+}
+
+function govau_push_resend($id)
+{
+
+//Get submission
+    $query = db_select('govau_push_submissions', 'fm');
+    $query->fields('fm');
+    $query->condition('fm.id', $id, '=');
+    $post = $query->execute()->fetchAssoc();
+// Acceptable server response codes.
+    $benign_reponse_codes = array('200', '301', '302', '307');
+
+
+// Repost data to each target. Begin by setting the
+// options for drupal_http_request().
+    $drupal_http_request_options = array(
+        'method' => 'POST',
+        'data' => $post['payload'],
+        'timeout' => 15,
+        'headers' => (array)json_decode($post['header']),
+    );
+// Where the magic happens:
+    $request = drupal_http_request($post['url'], $drupal_http_request_options);
+
+// Log any errors.
+    if (isset($request->code) && !in_array($request->code, $benign_reponse_codes)) {
+        $log_msg = 'A remote post to %url  returned a ';
+        $log_msg .= '\'%code\' code, which is a different HTTP response code ';
+        $log_msg .= 'than expected. Please make sure that the remote post URL ';
+        $log_msg .= 'is correct in the settings, and that ';
+        $log_msg .= 'the post was received in the remote system. ';
+        $log_msg .= $post['payload'];
+        $log_msg .= isset($request->data) ? $request->data : $request->error;
+
+        watchdog(
+            'govau_push',
+            $log_msg,
+            array(
+                '%url' => $post['payload'],
+                '%code' => $request->code,
+            ),
+            WATCHDOG_WARNING);
+// Update the remote post target:
+        db_update('govau_push_submissions')
+            ->fields(array(
+                'status' => 'failed',
+                'result' => isset($request->data) ? 'Data:' . $request->data . 'Error:' . $request->error : 'Error:' . $request->error,
+            ))
+            ->condition('id', $id)
+            ->execute();
+    } else {
+
+// Update the remote post target:
+        db_update('govau_push_submissions')
+            ->fields(array(
+                'status' => 'complete',
+                'result' => $request->data
+            ))
+            ->condition('id', $id)
+            ->execute();
+    }
+    drupal_set_message(t('Submission "!number" was resent!', array('!number' => $id)));
+    drupal_goto('admin/');
+}

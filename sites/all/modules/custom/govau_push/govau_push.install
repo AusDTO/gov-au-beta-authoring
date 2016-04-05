@@ -48,7 +48,7 @@ function govau_push_schema()
             ),
             'result' => array(
                 'description' => 'result content',
-                'type' => 'mediumtext',
+                'type' => 'text',
                 'not null' => TRUE,
             ),
         ),

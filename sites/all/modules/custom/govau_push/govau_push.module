@@ -148,7 +148,7 @@ function submit_key_value($payload)
         db_update('govau_push_submissions')
             ->fields(array(
                 'status' => 'failed',
-                'result' => isset($request->data) ? 'Data:' . $request->data . 'Error:' . $request->error : 'Error:' . $request->error,
+                'result' => isset($request->data) ? 'Data:' . substr($request->data,0,65000) . 'Error:' . $request->error : 'Error:' . $request->error,
             ))
             ->condition('id', $target['id'])
             ->execute();

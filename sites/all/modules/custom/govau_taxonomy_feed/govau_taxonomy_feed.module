@@ -1,0 +1,7 @@
+<?php
+/**
+ * @file
+ * Code for the GOV.AU Taxonomy Feed feature.
+ */
+
+include_once 'govau_taxonomy_feed.features.inc';

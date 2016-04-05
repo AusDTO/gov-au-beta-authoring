@@ -3,7 +3,7 @@
 #
 machine:
   php:
-    version: 5.5.34
+    version: 5.5.21
   environment:
     # Module name to test. Change to your module name.
     MODULE_NAME: "govau_push"

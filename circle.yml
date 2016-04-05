@@ -76,7 +76,7 @@ dependencies:
   # Disable sendmail binary to suppress any mailouts.
   - echo 'sendmail_path = /bin/true' >> ~/.phpenv/versions/$(phpenv version-name)/etc/conf.d/circle.ini
   # Download Drupal.
-  - drush dl --destination="$(dirname $DOCROOT)" --drupal-project-rename="$(basename $DOCROOT)" $DRUPAL_RELEASE -y
+  #- drush dl --destination="$(dirname $DOCROOT)" --drupal-project-rename="$(basename $DOCROOT)" $DRUPAL_RELEASE -y
   # Install drupal.
   - drush --yes --root=$DOCROOT site-install minimal --db-url=mysql://$DB_USERNAME:$DB_PASSWORD@127.0.0.1/DB_NAME install_configure_form.update_status_module='array(FALSE,FALSE)'
   # Show information about installed Drupal.

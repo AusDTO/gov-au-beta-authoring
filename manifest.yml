@@ -1,0 +1,11 @@
+---
+applications:
+- name: gov-au-authoring
+  buildpack: php_buildpack
+  memory: 256M
+  instances: 1
+  path: .
+  env:
+    BP_DEBUG: "True"
+  services:
+  - gov-au-authoring-db

@@ -15,7 +15,7 @@ machine:
     # Drupal release to use: drupal, drupal-7.x etc.
     DRUPAL_RELEASE: drupal-7.x
     # Build directories configuration.
-    DOCROOT: "$HOME/$CIRCLE_PROJECT_REPONAME/docroot"
+    DOCROOT: "$HOME/$CIRCLE_PROJECT_REPONAME/"
     MODULES_PATH: "$DOCROOT/sites/all/modules/custom"
     TEST_RESULTS: "$CIRCLE_TEST_REPORTS"
     # DB config. Using default CircleCI's database.

@@ -42,13 +42,49 @@ function govau_push_menu()
         'access arguments' => array('access administration pages'),
         'type' => MENU_NORMAL_ITEM,
     );
+
+    $items['node/%node/govau_status'] = array(
+        'title' => 'GOV.AU Status',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('govau_push_node_status'),
+        'page arguments' => array(1),
+        'access callback' => 'node_access',
+        'access arguments' => array('update', 1),
+        'weight' => 0,
+        'type' => MENU_LOCAL_TASK,
+        'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE
+    );
+    
     return $items;
+}
+/**
+ * Implements hook_form().
+ */
+function govau_push_node_status($form) {
+    global $user;
+    require_once('sites/all/libraries/php-jwt/src/JWT.php');
+
+    $payload = array(
+        "sub" => $user->mail,
+        "aud" => "gov.au",
+        "iat" => time(),
+        "exp" => time() + 20, // time in the future
+        "nbf" => time() - 20);
+    $encoded = Firebase\JWT\JWT::encode($payload, 'mysecretkey');
+
+    // Import your static HTML page
+    $form = array();
+    $form['html_markup'] = array('#markup' =>
+        '<form action="'.variable_get('govau_api_url').'/admin" method="get">'.
+        '<input type="hidden" name="token" value="'.$encoded.'"/>'.
+        '<button type="submit">Submit!</button></form>'
+    );
+    return $form;
 }
 
 function govau_push_admin_form()
 {
     $form = array();
-
     $form['govau_api_url'] = array(
         '#type' => 'textfield',
         '#title' => t('GOV.AU API URL'),
@@ -81,7 +117,7 @@ function govau_push_views_api()
 function submit_key_value($payload)
 {
 
-    $url = variable_get("govau_api_url");
+    $url = variable_get("govau_api_url").'/api/pages';
 
 // Acceptable server response codes.
     $benign_reponse_codes = array('200', '301', '302', '307');

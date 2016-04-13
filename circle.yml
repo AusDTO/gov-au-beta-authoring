@@ -90,7 +90,10 @@ dependencies:
   # Download an enable all module dependencies.
   - cd $MODULES_PATH/$MODULE_NAME && grep -aPoi "dependencies\[\]\s*=\s\K([^\s]+)" *.info|tr "\n" "," | xargs drush --yes --root=$DOCROOT en
   # Enable current module.
-  - drush --yes --root=$DOCROOT en $MODULE_NAME
+  #- drush --yes --root=$DOCROOT en $MODULE_NAME
+  - curl -v -L -o cf-cli_amd64.deb 'https://cli.run.pivotal.io/stable?release=debian64&source=github'
+  - sudo dpkg -i cf-cli_amd64.deb
+  - cf -v
 
 test:
   pre:
@@ -102,3 +105,14 @@ test:
 
   override:
   #- drush --root=$DOCROOT --uri=$SERVER --xml=$TEST_RESULTS test-run "$MODULE_TESTS"
+  post:
+  - cf api https://api.system.staging.digital.gov.au --skip-ssl-validation
+  - cf auth $CF_USER $CF_PASSWORD
+  - cf target -o dto -s dtomisc
+  - cf apps
+
+deployment:
+  staging:
+    branch: master
+    commands:
+      - cf push gov-au-authoring

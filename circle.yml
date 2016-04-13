@@ -115,4 +115,5 @@ deployment:
   staging:
     branch: master
     commands:
+      - chmod -Rv 755 sites/default/
       - cf push gov-au-authoring

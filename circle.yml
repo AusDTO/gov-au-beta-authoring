@@ -31,6 +31,8 @@ machine:
     server.local: 127.0.0.1
 
 dependencies:
+  cache_directories:
+  - .composer
   pre:
   # Modify user to make sure that there will be no permission issues.
   - sudo usermod -a -G $WEB_GROUP $WEB_USER
@@ -115,5 +117,6 @@ deployment:
   staging:
     branch: master
     commands:
+      - cp sites/default/settings.default.php sites/default/settings.php
       - chmod -Rv 755 sites/default/
       - cf push gov-au-authoring

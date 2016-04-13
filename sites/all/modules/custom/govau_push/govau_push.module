@@ -46,8 +46,7 @@ function govau_push_menu()
     $items['node/%node/govau_status'] = array(
         'title' => 'GOV.AU Status',
         'page callback' => 'drupal_get_form',
-        'page arguments' => array('govau_push_node_status'),
-        'page arguments' => array(1),
+        'page arguments' => array('govau_push_node_status', 1),
         'access callback' => 'node_access',
         'access arguments' => array('update', 1),
         'weight' => 0,
@@ -74,8 +73,9 @@ function govau_push_node_status($form) {
 
     // Import your static HTML page
     $form = array();
+    $form['#action'] = variable_get('govau_api_url').'/admin';
+    $form['#method'] = 'GET';
     $form['html_markup'] = array('#markup' =>
-        '<form action="'.variable_get('govau_api_url').'/admin" method="get">'.
         '<input type="hidden" name="token" value="'.$encoded.'"/>'.
         '<button type="submit">Submit!</button></form>'
     );

@@ -117,6 +117,6 @@ deployment:
   staging:
     branch: master
     commands:
-      - cp $DOCROOT/sites/default/default.settings.php $DOCROOT/sites/default/settings.php
       - chmod -Rv 755 sites/default/
+      - cp $DOCROOT/sites/default/default.settings.php $DOCROOT/sites/default/settings.php
       - cf push gov-au-authoring

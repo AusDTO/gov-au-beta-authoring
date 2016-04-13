@@ -97,7 +97,7 @@ dependencies:
 
 test:
   pre:
-  - drush --root=$DOCROOT cache-clear drush
+  #- drush --root=$DOCROOT cache-clear drush
   # Test that current module's source was properly copied into modules dir.
   - "[ \"$(ls -A $MODULES_PATH/$MODULE_NAME)\" ]"
   # Test that current module's tests are available.

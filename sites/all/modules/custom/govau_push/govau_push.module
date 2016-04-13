@@ -67,8 +67,8 @@ function govau_push_node_status($form) {
         "sub" => $user->mail,
         "aud" => "gov.au",
         "iat" => time(),
-        "exp" => time() + 20, // time in the future
-        "nbf" => time() - 20);
+        "exp" => time() + 90, // time in the future
+        "nbf" => time() - 90);
     $encoded = Firebase\JWT\JWT::encode($payload, 'mysecretkey');
 
     // Import your static HTML page

@@ -28,7 +28,7 @@ function govau_push_menu()
     $items['admin/govau-submission-results/resend/%'] = array(
         'title' => t('Post again to GOV.AU API'),
         'page callback' => 'govau_push_resend',
-        'page arguments' => array('id'),
+        'page arguments' => array(3),
         'type' => MENU_LOCAL_TASK,
         'access arguments' => array(TRUE),
         'access callback' => user_access('administer site configuration'),

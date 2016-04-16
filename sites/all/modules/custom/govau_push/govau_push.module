@@ -33,6 +33,14 @@ function govau_push_menu()
         'access arguments' => array(TRUE),
         'access callback' => user_access('administer site configuration'),
     );
+    $items['admin/govau-taxonomy-push'] = array(
+        'title' => t('Push taxonomies to GOV.AU API'),
+        'page callback' => 'govau_push_taxonomy',
+        'page arguments' => array(1),
+        'type' => MENU_LOCAL_TASK,
+        'access arguments' => array(TRUE),
+        'access callback' => user_access('administer site configuration'),
+    );
 
     $items['admin/config/content/govau_push'] = array(
         'title' => 'GOV.AU Push module settings',
@@ -56,11 +64,23 @@ function govau_push_menu()
     
     return $items;
 }
+
 /**
- * Implements hook_form().
+ * Implements hook_form_BASE_FORM_ID_alter().
  */
-function govau_push_node_status($form) {
-    global $user;
+function govau_push_form_node_form_alter(&$form, $form_state) {
+    // Add a 'View changes' button on the node edit form.
+           $form['actions']['preview_govau'] = array(
+            '#type' => 'submit',
+            '#value' => t('Preview on GOV.AU'),
+            '#weight' => 12,
+            '#submit' => array('govau_push_node_preview'),
+        );
+
+}
+
+function get_user_jwt() {
+        global $user;
     require_once('sites/all/libraries/php-jwt/src/JWT.php');
 
     $payload = array(
@@ -69,17 +89,41 @@ function govau_push_node_status($form) {
         "iat" => time(),
         "exp" => time() + 90, // time in the future
         "nbf" => time() - 90);
-    $encoded = Firebase\JWT\JWT::encode($payload, 'mysecretkey');
+    return Firebase\JWT\JWT::encode($payload, 'mysecretkey');
+}
+
+/**
+ * Implements hook_form().
+ */
+function govau_push_node_status($form, &$form_state) {
+
 
     // Import your static HTML page
     $form = array();
     $form['#action'] = variable_get('govau_api_url').'/admin';
     $form['#method'] = 'GET';
     $form['html_markup'] = array('#markup' =>
-        '<input type="hidden" name="token" value="'.$encoded.'"/>'.
+        '<input type="hidden" name="token" value="'.get_user_jwt().'"/>'.
         '<button type="submit">Submit!</button></form>'
     );
     return $form;
+}
+function govau_push_node_preview($form, &$form_state)
+{
+    // calculate not yet saved changes for preview
+    $node = node_form_submit_build_node($form, $form_state);
+// Prepend preview to node edit form
+    // node_preview is HTML as per node.pages.inc theme_node_preview()
+    $json_b64 = base64_encode(
+                    drupal_json_encode(
+                        json_encode_objects(
+                            [node_export_prepare_node($node)]
+                        )
+                        [0]
+                )
+    );
+    $form_state['node_preview'] = '<div class="preview" style="border: solid 3px black;"><iframe width=100% height="600px" src="'.variable_get('govau_api_url').'/api/pages/preview?token='.get_user_jwt().'&json_b64='.$json_b64.'"></iframe></div>';
+    $form_state['rebuild'] = TRUE;
 }
 
 function govau_push_admin_form()
@@ -114,10 +158,10 @@ function govau_push_views_api()
     return array('api' => 3.0);
 }
 
-function submit_key_value($payload)
+function submit_key_value($payload,$path)
 {
 
-    $url = variable_get("govau_api_url").'/api/pages';
+    $url = variable_get("govau_api_url").$path;
 
 // Acceptable server response codes.
     $benign_reponse_codes = array('200', '301', '302', '307');
@@ -238,9 +282,21 @@ function govau_push_workbench_moderation_transition($node, $previous_state, $new
                 )
                 [0]
             )
-        );
+        ,'/api/pages');
     }
 }
+function govau_push_taxonomy($id)
+{
+    $data = [];
+    $vocabs = taxonomy_get_vocabularies();
+        foreach ($vocabs as $vocab){
+            $terms = taxonomy_get_tree($vocab->vid);
+           $data = array_merge($data,$terms);
+            }
+    $payload = drupal_json_encode(json_encode_objects(Array("taxonomy_terms"=>$data)));
+    submit_key_value($payload,'/api/taxonomy_terms');
+}
+
 
 function govau_push_resend($id)
 {

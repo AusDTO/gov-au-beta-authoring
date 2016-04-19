@@ -1,4 +1,6 @@
 <?php
+require_once('sites/all/libraries/simple_html_dom.php');
+require_once('sites/all/libraries/php-jwt/src/JWT.php');
 /**
  * Implements hook_help().
  *
@@ -61,27 +63,29 @@ function govau_push_menu()
         'type' => MENU_LOCAL_TASK,
         'context' => MENU_CONTEXT_PAGE | MENU_CONTEXT_INLINE
     );
-    
+
     return $items;
 }
 
 /**
  * Implements hook_form_BASE_FORM_ID_alter().
  */
-function govau_push_form_node_form_alter(&$form, $form_state) {
+function govau_push_form_node_form_alter(&$form, $form_state)
+{
     // Add a 'View changes' button on the node edit form.
-           $form['actions']['preview_govau'] = array(
-            '#type' => 'submit',
-            '#value' => t('Preview on GOV.AU'),
-            '#weight' => 12,
-            '#submit' => array('govau_push_node_preview'),
-        );
+    $form['actions']['preview_govau'] = array(
+        '#type' => 'submit',
+        '#value' => t('Preview on GOV.AU'),
+        '#weight' => 12,
+        '#submit' => array('govau_push_node_preview'),
+    );
 
 }
 
-function get_user_jwt() {
-        global $user;
-    require_once('sites/all/libraries/php-jwt/src/JWT.php');
+function get_user_jwt()
+{
+    global $user;
+
 
     $payload = array(
         "sub" => $user->mail,
@@ -95,19 +99,21 @@ function get_user_jwt() {
 /**
  * Implements hook_form().
  */
-function govau_push_node_status($form, &$form_state) {
+function govau_push_node_status($form, &$form_state)
+{
 
 
     // Import your static HTML page
     $form = array();
-    $form['#action'] = variable_get('govau_api_url').'/admin';
+    $form['#action'] = variable_get('govau_api_url') . '/admin';
     $form['#method'] = 'GET';
     $form['html_markup'] = array('#markup' =>
-        '<input type="hidden" name="token" value="'.get_user_jwt().'"/>'.
+        '<input type="hidden" name="token" value="' . get_user_jwt() . '"/>' .
         '<button type="submit">Submit!</button></form>'
     );
     return $form;
 }
+
 function govau_push_node_preview($form, &$form_state)
 {
     // calculate not yet saved changes for preview
@@ -115,14 +121,14 @@ function govau_push_node_preview($form, &$form_state)
 // Prepend preview to node edit form
     // node_preview is HTML as per node.pages.inc theme_node_preview()
     $json_b64 = base64_encode(
-                    drupal_json_encode(
-                        json_encode_objects(
-                            [node_export_prepare_node($node)]
-                        )
-                        [0]
-                )
+        drupal_json_encode(
+            json_encode_objects(
+                [govau_push_prepare_node($node)]
+            )
+            [0]
+        )
     );
-    $form_state['node_preview'] = '<div class="preview" style="border: solid 3px black;"><iframe width=100% height="600px" src="'.variable_get('govau_api_url').'/api/pages/preview?token='.get_user_jwt().'&json_b64='.$json_b64.'"></iframe></div>';
+    $form_state['node_preview'] = '<div class="preview" style="border: solid 3px black;"><iframe width=100% height="600px" src="' . variable_get('govau_api_url') . '/api/pages/preview?token=' . get_user_jwt() . '&json_b64=' . $json_b64 . '"></iframe></div>';
     $form_state['rebuild'] = TRUE;
 }
 
@@ -158,10 +164,10 @@ function govau_push_views_api()
     return array('api' => 3.0);
 }
 
-function submit_key_value($payload,$path)
+function submit_key_value($payload, $path)
 {
 
-    $url = variable_get("govau_api_url").$path;
+    $url = variable_get("govau_api_url") . $path;
 
 // Acceptable server response codes.
     $benign_reponse_codes = array('200', '301', '302', '307');
@@ -229,7 +235,7 @@ function submit_key_value($payload,$path)
         db_update('govau_push_submissions')
             ->fields(array(
                 'status' => 'failed',
-                'result' => (isset($request->data) ? 'Data:' . substr($request->data,0,65000) : ' ').(isset($request->error) ? ' Error:' . $request->error : ' '),
+                'result' => (isset($request->data) ? 'Data:' . substr($request->data, 0, 65000) : ' ') . (isset($request->error) ? ' Error:' . $request->error : ' '),
             ))
             ->condition('id', $target['id'])
             ->execute();
@@ -259,10 +265,12 @@ function govau_push_permission()
         ),
     );
 }
+
 /**
  * Mark objects as being objects.
  */
-function json_encode_objects($var) {
+function json_encode_objects($var)
+{
     if (is_object($var)) {
         $var = (array)$var;
         $var['#node_export_object'] = '1';
@@ -275,25 +283,64 @@ function json_encode_objects($var) {
     return $var;
 }
 
-function govau_push_workbench_moderation_transition($node, $previous_state, $new_state) {
+function govau_push_prepare_node($node)
+{
+    $node = node_export_prepare_node($node);
+    foreach (get_object_vars($node) as $key => &$var) {
+        if (strpos($key, "field_") === 0) {
+            // taxonomy export
+            if (isset($node->{$key}['und'][0]['tid'])) {
+                foreach ($node->{$key}['und'] as &$term) {
+                    $term = json_encode_objects([taxonomy_term_load($term['tid'])])[0];
+                }
+            }
+
+
+        }
+        // html field processing
+        if ($key == 'body') {
+            $html = str_get_html($var["und"][0]["value"]);
+            foreach ($html->find('a') as &$element) {
+                // internal links should have uuids
+                if (!strstr($element->href, '://')) {
+                    $system_path = $element->href;
+                    if (!strstr($element->href, 'node')) $system_path = drupal_lookup_path('source', substr($element->href, 1));
+                    $link_node = node_load(arg(2, $system_path));
+                    $element->{'data-uuid'} = $link_node->uuid;
+                }
+            }
+            $node->{$key}["und"][0]["value"] = (String)$html;
+        }
+
+
+    }
+
+    return $node;
+}
+
+function govau_push_workbench_moderation_transition($node, $previous_state, $new_state)
+{
     if ($new_state == "published") {
         govau_push_taxonomy();
         $result = submit_key_value(
             drupal_json_encode(
                 json_encode_objects(
-                    [node_export_prepare_node($node)]
+                    [govau_push_prepare_node($node)]
                 )
                 [0]
             )
-        ,'/api/pages');
+            , '/api/pages');
         drupal_set_message('Submitted to GOV.AU.');
     }
 }
 
-function govau_push_entity_update($entity, $type) {
+function govau_push_entity_update($entity, $type)
+{
     if ($type == 'taxonomy_term') govau_push_taxonomy();
 }
-function govau_push_entity_insert($entity, $type) {
+
+function govau_push_entity_insert($entity, $type)
+{
     if ($type == 'taxonomy_term') govau_push_taxonomy();
 }
 
@@ -302,12 +349,12 @@ function govau_push_taxonomy()
 {
     $data = [];
     $vocabs = taxonomy_get_vocabularies();
-        foreach ($vocabs as $vocab){
-            $terms = taxonomy_get_tree($vocab->vid);
-           $data = array_merge($data,$terms);
-            }
-    $payload = drupal_json_encode(json_encode_objects(Array("taxonomy_terms"=>$data)));
-    submit_key_value($payload,'/api/taxonomy_terms');
+    foreach ($vocabs as $vocab) {
+        $terms = taxonomy_get_tree($vocab->vid);
+        $data = array_merge($data, $terms);
+    }
+    $payload = drupal_json_encode(json_encode_objects(Array("taxonomy_terms" => $data)));
+    submit_key_value($payload, '/api/taxonomy_terms');
 }
 
 

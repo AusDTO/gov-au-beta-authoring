@@ -203,10 +203,11 @@ function submit_key_value($payload,$path)
 
 // Where the magic happens:
     $request = drupal_http_request($url, $drupal_http_request_options);
-    $result = json_decode($request->data);
+    if (isset($request->data)) {
+        $result = json_decode($request->data);
+    }
 // Log any errors.
     if (!isset($request->code) or !in_array($request->code, $benign_reponse_codes)
-        or !isset($result->success) or !$result->success
     ) {
         $log_msg = 'A remote post to %url  returned a ';
         $log_msg .= '\'%code\' code, which is a different HTTP response code ';
@@ -228,7 +229,7 @@ function submit_key_value($payload,$path)
         db_update('govau_push_submissions')
             ->fields(array(
                 'status' => 'failed',
-                'result' => isset($request->data) ? 'Data:' . substr($request->data,0,65000) . 'Error:' . $request->error : 'Error:' . $request->error,
+                'result' => (isset($request->data) ? 'Data:' . substr($request->data,0,65000) : ' ').(isset($request->error) ? ' Error:' . $request->error : ' '),
             ))
             ->condition('id', $target['id'])
             ->execute();
@@ -243,6 +244,7 @@ function submit_key_value($payload,$path)
             ->condition('id', $target['id'])
             ->execute();
     }
+    return $result;
 }
 
 /**
@@ -275,7 +277,8 @@ function json_encode_objects($var) {
 
 function govau_push_workbench_moderation_transition($node, $previous_state, $new_state) {
     if ($new_state == "published") {
-        submit_key_value(
+        govau_push_taxonomy();
+        $result = submit_key_value(
             drupal_json_encode(
                 json_encode_objects(
                     [node_export_prepare_node($node)]
@@ -283,9 +286,19 @@ function govau_push_workbench_moderation_transition($node, $previous_state, $new
                 [0]
             )
         ,'/api/pages');
+        drupal_set_message('Submitted to GOV.AU.');
     }
 }
-function govau_push_taxonomy($id)
+
+function govau_push_entity_update($entity, $type) {
+    if ($type == 'taxonomy_term') govau_push_taxonomy();
+}
+function govau_push_entity_insert($entity, $type) {
+    if ($type == 'taxonomy_term') govau_push_taxonomy();
+}
+
+
+function govau_push_taxonomy()
 {
     $data = [];
     $vocabs = taxonomy_get_vocabularies();

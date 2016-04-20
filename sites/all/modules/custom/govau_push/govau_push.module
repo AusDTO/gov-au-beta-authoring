@@ -294,7 +294,13 @@ function govau_push_prepare_node($node)
                     $term = json_encode_objects([taxonomy_term_load($term['tid'])])[0];
                 }
             }
-
+// node reference export
+            if (isset($node->{$key}['und'][0]['target_id'])) {
+                foreach ($node->{$key}['und'] as &$ref) {
+                    $target_node = node_load($ref['target_id']);
+                    $ref = Array("target_id" => $ref['target_id'], "target_uuid" => $target_node->uuid);
+                }
+            }
 
         }
         // html field processing

@@ -66,6 +66,9 @@ dependencies:
   # Install drush.
   - composer global require drush/drush:6.6.0
   post:
+  # update git submodules
+  - git submodule init
+  - git submodule update
   # Create $DOCROOT directory and set ownership and permisions.
   - mkdir -p $DOCROOT
   - sudo chmod -f 775 $DOCROOT

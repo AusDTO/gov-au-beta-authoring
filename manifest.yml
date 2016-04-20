@@ -5,7 +5,5 @@ applications:
   memory: 512M
   instances: 1
   path: .
-  #env:
-  #  BP_DEBUG: "True"
   services:
   - gov-au-authoring-db

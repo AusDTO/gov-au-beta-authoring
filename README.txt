@@ -1,3 +1,5 @@
-cf create-service DTO-staging-RDS-mysql 5.6-t2.micro-5G gov-au-authoring-db
+# Experimental GOV.AU Authoring tool
 
-cf push -i 1 -u none -c "./vendor/bin/drush sql-drop"
+This is GovCMS/Drupal with an added module govau_push which is used for experimental spikes in https://github.com/AusDTO/gov-au-beta 
+
+govau_push sends content and taxonomies to an API when they are changed. It also allows logging in to the experimental application and previewing content before it is published.

@@ -79,6 +79,15 @@ function govau_push_form_node_form_alter(&$form, $form_state)
         '#weight' => 12,
         '#submit' => array('govau_push_node_preview'),
     );
+    $form['#prefix'] =
+        '<div class="messages">
+<b>GOV.AU Page Metrics</b><br/>
+<b>Unique pageviews:</b> <a href="#">78.8k per day</a><br/>
+<b>Problem reports:</b> <a href="#">17.3 per week</a><br/>
+<b>Searches started from this page:</b> <a href="#">23.6 per day</a><br/>
+<b>Users left by searching for:</b> <a href="#">ASIC</a> (331)<br/>
+</div>'
+    ;
 
 }
 

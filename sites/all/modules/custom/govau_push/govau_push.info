@@ -1,5 +1,5 @@
-name = GOV.AU Push
-description = Post content to GOV.AU API
+name = DEPRECATED GOV.AU Push
+description = DEPRECATED Post content to GOV.AU API
 core = 7.x
 dependencies[] = rules
 dependencies[] = node_export

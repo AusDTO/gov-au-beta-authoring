@@ -52,6 +52,23 @@ function govau_publish_node_json($id)
  */
 function govau_publisher_form_node_form_alter(&$form, $form_state)
 {
+if (isset($form['field_section']) && $form["#node"]->type == 'gov_au_page') {
+    // TODO add section list from GOV.AU API
+    $form['field_section']['und'][0]['value']['#type'] = 'select';
+    $form['field_section']['und'][0]['value']['#options'] = array(
+        0 => t('Section A'),
+        1 => t('Section B'),
+    );
+    $form['field_section']['und'][0]['value']['#field_suffix'] = "
+    <script>
+    jQuery('#edit-field-section-und-0-value').change(function() {
+      window.alert('hi! ' + jQuery( this ).val());
+    });
+    </script>
+    ";
+
+    $form['field_section']['und'][0]['value']['#size'] = 1;
+}
 
 }
 
@@ -169,4 +186,3 @@ function govau_publisher_workbench_moderation_transition($node, $previous_state,
 
 
 }
-

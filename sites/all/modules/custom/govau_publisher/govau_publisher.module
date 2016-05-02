@@ -1,0 +1,172 @@
+<?php
+require_once('simple_html_dom.php');
+
+/**
+ * Implements hook_menu().
+ *
+ * @see govau_publisher_menu_load()
+ */
+function govau_publisher_menu()
+{
+    $items = array();
+
+    $items['admin/config/content/govau_publisher'] = array(
+        'title' => 'GOV.AU Push module settings',
+        'description' => 'GOV.AU Push module settings',
+        'page callback' => 'drupal_get_form',
+        'page arguments' => array('govau_publisher_admin_form'),
+        'access arguments' => array('access administration pages'),
+        'type' => MENU_NORMAL_ITEM,
+    );
+
+    $items['api/node/%'] = array(
+        'title' => 'Node as JSON for GOV.AU access',
+        'page callback' => 'govau_publish_node_json',
+        'page arguments' => array(2),
+        'access arguments' => array('access content'),
+        'type' => MENU_CALLBACK,
+    );
+    return $items;
+}
+
+function govau_publish_node_json($id)
+{
+    $node = node_load($id);
+    if ($node && $node->status) {
+        // current revision is published revision
+        drupal_json_output(
+            json_encode_objects(
+                [govau_publisher_prepare_node($node)]
+            )
+            [0]
+        );
+    } else {
+        // no published revision
+        drupal_not_found();
+        return;
+    }
+}
+
+/**
+ * Implements hook_form_BASE_FORM_ID_alter().
+ */
+function govau_publisher_form_node_form_alter(&$form, $form_state)
+{
+
+}
+
+function govau_publisher_admin_form()
+{
+    $form = array();
+    $form['govau_api_url'] = array(
+        '#type' => 'textfield',
+        '#title' => t('GOV.AU API URL'),
+        '#default_value' => variable_get('govau_api_url'),
+        '#size' => 255,
+        '#maxlength' => 255,
+        '#description' => t("GOV.AU API URL"),
+        '#required' => TRUE,
+    );
+
+    return system_settings_form($form);
+}
+
+function govau_publisher_admin_validate($form, &$form_state)
+{
+
+
+}
+
+/**
+ * Mark objects as being objects.
+ */
+function json_encode_objects($var)
+{
+    if (is_object($var)) {
+        $var = (array)$var;
+        $var['#node_export_object'] = '1';
+    }
+    if (is_array($var)) {
+        foreach ($var as $key => $value) {
+            $var[$key] = json_encode_objects($value);
+        }
+    }
+    return $var;
+}
+
+function govau_publisher_prepare_node($node)
+{
+    $node = node_export_prepare_node($node);
+    foreach (get_object_vars($node) as $key => &$var) {
+        if (strpos($key, "field_") === 0) {
+            // taxonomy export
+            if (isset($node->{$key}['und'][0]['tid'])) {
+                foreach ($node->{$key}['und'] as &$term) {
+                    $term = json_encode_objects([taxonomy_term_load($term['tid'])])[0];
+                }
+            }
+// node reference export
+            if (isset($node->{$key}['und'][0]['target_id'])) {
+                foreach ($node->{$key}['und'] as &$ref) {
+                    $target_node = node_load($ref['target_id']);
+                    $ref = Array("target_id" => $ref['target_id'], "target_uuid" => $target_node->uuid);
+                }
+            }
+
+        }
+        // html field processing
+        if ($key == 'body') {
+            $html = str_get_html($var["und"][0]["value"]);
+            foreach ($html->find('a') as &$element) {
+                // internal links should have uuids
+                if (!strstr($element->href, '://')) {
+                    $system_path = $element->href;
+                    if (!strstr($element->href, 'node')) $system_path = drupal_lookup_path('source', substr($element->href, 1));
+                    $link_node = node_load(arg(2, $system_path));
+                    $element->{'data-uuid'} = $link_node->uuid;
+                }
+            }
+            $node->{$key}["und"][0]["value"] = (String)$html;
+        }
+
+
+    }
+
+    return $node;
+}
+
+function govau_publisher_workbench_moderation_transition($node, $previous_state, $new_state)
+{// Acceptable server response codes.
+    $benign_reponse_codes = array('200', '301', '302', '307');
+
+    if ($new_state == "published") {
+        $payload = json_encode(Array("updated_content" => $node->uuid));
+        $url = variable_get("govau_api_url");
+        $headers = array('Content-Type' => 'application/json');
+        $drupal_http_request_options = array(
+            'method' => 'POST',
+            'data' => $payload,
+            'timeout' => 15,
+            'headers' => $headers,
+        );
+
+// Where the magic happens:
+        $request = drupal_http_request($url, $drupal_http_request_options);
+        if (isset($request->data)) {
+            $result = json_decode($request->data);
+        }
+// Log any errors.
+        if (!isset($request->code) or !in_array($request->code, $benign_reponse_codes)
+            or !isset($result) or empty($result)
+        ) {
+            //fail
+            drupal_set_message('Failed submitted to GOV.AU.', 'error');
+            workbench_moderation_moderate($node, $previous_state);
+        } else //
+            drupal_set_message('Submitted to GOV.AU.');
+        // success
+    }
+
+
+}
+

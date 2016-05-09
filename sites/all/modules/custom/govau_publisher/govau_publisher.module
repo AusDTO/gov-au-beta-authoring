@@ -21,7 +21,7 @@ function govau_publisher_menu()
 
     $items['api/node/%'] = array(
         'title' => 'Node as JSON for GOV.AU access',
-        'page callback' => 'govau_publish_node_json',
+        'page callback' => 'govau_publisher_node_json',
         'page arguments' => array(2),
         'access arguments' => array('access content'),
         'type' => MENU_CALLBACK,
@@ -29,7 +29,7 @@ function govau_publisher_menu()
     return $items;
 }
 
-function govau_publish_node_json($id)
+function govau_publisher_node_json($id)
 {
     $node = node_load($id);
     if ($node && $node->status) {
@@ -154,11 +154,11 @@ function govau_publisher_prepare_node($node)
 
 function govau_publisher_workbench_moderation_transition($node, $previous_state, $new_state)
 {// Acceptable server response codes.
-    $benign_reponse_codes = array('200', '301', '302', '307');
+
 
     if ($new_state == "published") {
-        $payload = json_encode(Array("updated_content" => $node->uuid));
-        $url = variable_get("govau_api_url");
+        $payload = json_encode(Array("updated_content" => $node->nid));
+        $url = variable_get("govau_api_url") ."/api/nodes";
         $headers = array('Content-Type' => 'application/json');
         $drupal_http_request_options = array(
             'method' => 'POST',
@@ -169,12 +169,12 @@ function govau_publisher_workbench_moderation_transition($node, $previous_state,
 
 // Where the magic happens:
         $request = drupal_http_request($url, $drupal_http_request_options);
-        if (isset($request->data)) {
+        /*if (isset($request->data)) {
             $result = json_decode($request->data);
-        }
+        }*/
 // Log any errors.
-        if (!isset($request->code) or !in_array($request->code, $benign_reponse_codes)
-            or !isset($result) or empty($result)
+        if (!isset($request->code) or $request->code != "201"
+            //or !isset($result) or empty($result)
         ) {
             //fail
             drupal_set_message('Failed submitted to GOV.AU.', 'error');

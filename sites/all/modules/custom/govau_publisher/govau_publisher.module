@@ -59,6 +59,7 @@ if (isset($form['field_section']) && $form["#node"]->type == 'gov_au_page') {
         0 => t('Section A'),
         1 => t('Section B'),
     );
+
     $form['field_section']['und'][0]['value']['#field_suffix'] = "
     <script>
     jQuery('#edit-field-section-und-0-value').change(function() {
@@ -67,7 +68,43 @@ if (isset($form['field_section']) && $form["#node"]->type == 'gov_au_page') {
     </script>
     ";
 
+    $form['field_template']['und'][0]['value']['#type'] = 'select';
+    $url = variable_get("govau_api_url") ."/api/templates";
+    $drupal_http_request_options = array(
+        'method' => 'GET',
+        'timeout' => 15,
+    );
+
+    $request = drupal_http_request($url, $drupal_http_request_options);
+    if (isset($request->data)) {
+        $result = json_decode($request->data, true);
+    }
+
+    $templates = array();
+    $template_attrs = array();
+    foreach($result as $key => $val){
+        $templates[$key] = t($val['name']);
+        $template_attrs[$key] = array(
+          'data-image-preview' => variable_get("govau_api_url").$val['image']
+        );
+    }
+    $form['field_template']['und'][0]['value']['#options'] = $templates;
+    $form['field_template']['und'][0]['value']['#options_attributes'] = $template_attrs;
+
+    $form['field_template']['und'][0]['value']['#field_suffix'] = "
+        <img id='template-preview' height='50' width='50'>
+        <script>
+          jQuery('#template-preview').attr('src', jQuery('option:selected', jQuery('#edit-field-template-und-0-value')).attr('data-image-preview'));
+          jQuery('#edit-field-template-und-0-value').change(function() {
+            var image_url = jQuery('option:selected', this).attr('data-image-preview');
+            jQuery('#template-preview').attr('src', image_url)
+          });
+        </script>
+
+    ";
+
     $form['field_section']['und'][0]['value']['#size'] = 1;
+    $form['field_template']['und'][0]['value']['#size'] = 1;
 }
 
 }

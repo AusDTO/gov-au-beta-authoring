@@ -1,0 +1,556 @@
+<?php
+
+/**
+ * @file
+ * The main Module Permissions module file.
+ *
+ * Module Permissions allows a subset of modules to be enabled/disabled.
+ */
+
+/**
+ * Implements hook_help().
+ */
+function module_permissions_help($path, $arg) {
+  switch ($path) {
+    case 'admin/help#module_permissions':
+      $output = '<p>' . t("Allow administrators to define a list of modules that can be managed by others.") . '</p>';
+
+      return $output;
+
+    case 'admin/modules/managed':
+      $output = '<p>' . t("Please select modules for users with permission 'Administer managed modules' to enable/disable.") . '</p>';
+
+      return $output;
+
+    case 'admin/config/system/managed-modules':
+      $output = '<p>' . t("Please select modules for users with permission 'Administer managed modules' to enable/disable.") . '</p>';
+
+      return $output;
+  }
+}
+
+/**
+ * Implements hook_hook_info().
+ */
+function module_permissions_hook_info() {
+  $hooks = array(
+    'module_permissions_access' => array(
+      'group' => 'module_permissions',
+    ),
+    'module_permissions_restrict' => array(
+      'group' => 'module_permissions',
+    ),
+  );
+
+  return $hooks;
+}
+
+/**
+ * Implements hook_module_implements_alter().
+ */
+function module_permissions_module_implements_alter(&$implementations, $hook) {
+  if ($hook == 'form_alter' || $hook == 'menu_alter') {
+    $group = $implementations['module_permissions'];
+    unset($implementations['module_permissions']);
+    $implementations['module_permissions'] = $group;
+  }
+}
+
+/**
+ * Implements hook_permission().
+ */
+function module_permissions_permission() {
+  return array(
+    'administer module permissions' => array(
+      'title' => t('Administer the list of modules that can be managed by others'),
+      'description' => t('Add and remove modules from the managed module list.'),
+      'restrict access' => TRUE,
+    ),
+    'administer managed modules' => array(
+      'title' => t('Administer managed modules'),
+      'description' => t('Enable and disable modules from the managed module list.'),
+      'restrict access' => TRUE,
+    ),
+    'administer managed modules permissions' => array(
+      'title' => t('Administer managed modules permissions'),
+      'description' => t('Configure permissions for the modules that are in the managed modules list.'),
+      'restrict access' => TRUE,
+    ),
+  );
+}
+
+/**
+ * Implements hook_menu().
+ */
+function module_permissions_menu() {
+  // Managed modules list path.
+  $items['admin/modules/managed'] = array(
+    'title' => 'Managed modules',
+    'description' => 'Add/remove modules from the managed module list.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('module_permissions_managed_modules'),
+    'access arguments' => array('administer module permissions'),
+    'file' => 'includes/module_permissions.pages.inc',
+  );
+
+  // Managed modules config path.
+  $items['admin/config/system/managed-modules'] = array(
+    'title' => 'Module permissions',
+    'description' => 'Administer the list of modules that can be managed by others',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('module_permissions_managed_modules'),
+    'access arguments' => array('administer module permissions'),
+    'file' => 'includes/module_permissions.pages.inc',
+  );
+  $items['admin/config/system/managed-modules/list'] = array(
+    'title' => 'List',
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+  );
+  $items['admin/config/system/managed-modules/config'] = array(
+    'title' => 'Configuration',
+    'description' => 'Administer settings.',
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('module_permissions_config'),
+    'access arguments' => array('administer site configuration'),
+    'type' => MENU_LOCAL_TASK,
+    'file' => 'includes/module_permissions.admin.inc',
+    'weight' => 20,
+  );
+
+  return $items;
+}
+
+/**
+ * Implements hook_menu_alter().
+ */
+function module_permissions_menu_alter(&$items) {
+  // System user permissions and role forms.
+  if (isset($items['admin/people/permissions'])) {
+    $items['admin/people/permissions']['access callback'] = 'module_permissions_access';
+    $items['admin/people/permissions']['access arguments'] = array('user_admin_permissions');
+  }
+  // System modules list.
+  if (isset($items['admin/modules'])) {
+    $items['admin/modules']['access callback'] = 'module_permissions_access';
+    $items['admin/modules']['access arguments'] = array('system_modules');
+  }
+  // System modules confirm.
+  if (isset($items['admin/modules/list/confirm'])) {
+    $items['admin/modules/list/confirm']['access callback'] = 'module_permissions_access';
+    $items['admin/modules/list/confirm']['access arguments'] = array('system_modules');
+  }
+}
+
+/**
+ * Provide a access callback.
+ *
+ * @see module_permissions_menu_alter()
+ */
+function module_permissions_access($op = 'system_modules', $account = NULL) {
+  $access = &drupal_static(__FUNCTION__, array());
+
+  $account = !empty($account) ? $account : $GLOBALS['user'];
+  // Statically cache access by user account ID, and operation.
+  $cid = $account->uid . ':' . $op;
+
+  if (!isset($access[$cid])) {
+    // Return FALSE by default.
+    $access[$cid] = FALSE;
+
+    // User #1 has all privileges:
+    if ($account->uid == 1) {
+      $access[$cid] = TRUE;
+
+      return $access[$cid];
+    }
+
+    // Provide access hook for other modules.
+    $access_results = module_invoke_all('module_permissions_access', $op, $account);
+
+    if (in_array(FALSE, $access_results, TRUE)) {
+      $access[$cid] = FALSE;
+
+      return $access[$cid];
+    }
+    elseif (in_array(TRUE, $access_results, TRUE)) {
+      $access[$cid] = TRUE;
+
+      return $access[$cid];
+    }
+
+    // Check OP.
+    if ($op == 'system_modules') {
+      // Perform basic permission checks first.
+      if (user_access('administer modules', $account)) {
+        $access[$cid] = TRUE;
+
+        return $access[$cid];
+      }
+      // Module permissions permission settings.
+      if (user_access('administer managed modules', $account)) {
+        $access[$cid] = TRUE;
+
+        return $access[$cid];
+      }
+    }
+    elseif ($op == 'user_admin_permissions') {
+      // Perform basic permission checks first.
+      if (user_access('administer permissions', $account)) {
+        $access[$cid] = TRUE;
+
+        return $access[$cid];
+      }
+      // Module permissions permission settings.
+      if (user_access('administer managed modules permissions', $account) && user_access('administer managed modules', $account)) {
+        $access[$cid] = TRUE;
+
+        return $access[$cid];
+      }
+    }
+  }
+
+  return $access[$cid];
+}
+
+/**
+ * Provide a restrict status check callback.
+ *
+ * @see module_permissions_form_alter()
+ */
+function module_permissions_restrict($op = 'system_modules', $account = NULL) {
+  $restrict = &drupal_static(__FUNCTION__, array());
+
+  $account = !empty($account) ? $account : $GLOBALS['user'];
+  // Statically cache access by user account ID, and operation.
+  $cid = $account->uid . ':' . $op;
+
+  if (!isset($restrict[$cid])) {
+    // Return TRUE by default.
+    $restrict[$cid] = TRUE;
+
+    // User #1 has all privileges:
+    if ($account->uid == 1) {
+      $restrict[$cid] = FALSE;
+
+      return $restrict[$cid];
+    }
+
+    // Provide access hook for other modules.
+    $restrict_results = module_invoke_all('module_permissions_restrict', $op, $account);
+
+    if (in_array(TRUE, $restrict_results, TRUE)) {
+      $restrict[$cid] = TRUE;
+
+      return $restrict[$cid];
+    }
+    elseif (in_array(FALSE, $restrict_results, TRUE)) {
+      $restrict[$cid] = FALSE;
+
+      return $restrict[$cid];
+    }
+
+    // Check OP.
+    if ($op == 'system_modules') {
+      // Perform basic permission checks first.
+      if (user_access('administer modules', $account)) {
+        $restrict[$cid] = FALSE;
+
+        return $restrict[$cid];
+      }
+      // Module permissions permission settings.
+      if (user_access('administer managed modules', $account)) {
+        $restrict[$cid] = TRUE;
+
+        return $restrict[$cid];
+      }
+    }
+    elseif ($op == 'user_admin_permissions') {
+      // Perform basic permission checks first.
+      if (user_access('administer permissions', $account)) {
+        $restrict[$cid] = FALSE;
+
+        return $restrict[$cid];
+      }
+      // Module permissions permission settings.
+      if (user_access('administer managed modules permissions', $account) && user_access('administer managed modules', $account)) {
+        $restrict[$cid] = TRUE;
+
+        return $restrict[$cid];
+      }
+    }
+  }
+
+  return $restrict[$cid];
+}
+
+/**
+ * Implements hook_form_alter().
+ */
+function module_permissions_form_alter(&$form, &$form_state, $form_id) {
+  switch ($form_id) {
+    case 'system_modules':
+    case 'user_admin_permissions':
+      if (module_permissions_restrict($form_id)) {
+        module_permissions_form_handler($form, 'module_permissions_form_' . $form_id . '_handler');
+      }
+      break;
+  }
+}
+
+/**
+ * Form alter handler callback.
+ */
+function module_permissions_form_handler(&$form, $callback = '') {
+  if (!empty($callback) && function_exists($callback)) {
+    $callback($form);
+    // Add logs submit callback.
+    $form["#submit"][] = 'module_permissions_logs_submit';
+  }
+}
+
+/**
+ * Managed modules list form.
+ */
+function module_permissions_form_system_modules_handler(&$form) {
+  if (isset($form['modules'])) {
+    // Remove module permissions from form.
+    if (isset($form['modules']['Administration']['module_permissions'])) {
+      unset($form['modules']['Administration']['module_permissions']);
+    }
+    // Move locked modules into different part of the form, this ensures
+    // the values are still submitted.
+    $form['locked'] = array('#tree' => TRUE, '#access' => FALSE);
+    // Remove modules from form that are not in the managed list.
+    $managed_modules = module_permissions_managed_modules_load();
+    if (empty($managed_modules)) {
+      drupal_set_message(t('Managed module list is empty. Please contact your site administrator.'), 'status');
+    }
+    foreach (element_children($form['modules']) as $package) {
+      foreach (element_children($form['modules'][$package]) as $module) {
+        if (!isset($managed_modules[$module])) {
+          // Copy row into locked area.
+          $row = $form['modules'][$package][$module];
+          $row['#parents'] = array('modules', $package, $module);
+          $form['locked'][$package][$module] = $row;
+          // Remove from display.
+          unset($form['modules'][$package][$module]);
+        }
+      }
+      $modules = element_children($form['modules'][$package]);
+      if (empty($modules)) {
+        unset($form['modules'][$package]);
+      }
+    }
+
+    // Module filter support.
+    if (module_exists('module_filter')) {
+      $submit_key = array_search('module_filter_system_modules_submit_recent', $form['#submit']);
+      if ($submit_key) {
+        $form['#submit'][$submit_key] = 'module_permissions_module_filter_system_modules_submit_recent';
+      }
+    }
+  }
+}
+
+/**
+ * Override module filters recent modules submit handler.
+ */
+function module_permissions_module_filter_system_modules_submit_recent($form, &$form_state) {
+  $recent_modules = variable_get('module_filter_recent_modules', array());
+
+  foreach ($form_state['values']['modules'] as $package => $modules) {
+    foreach ($modules as $key => $module) {
+      if (isset($form['modules'][$package][$key]['enable']['#default_value'])) {
+        $default_value = $form['modules'][$package][$key]['enable']['#default_value'];
+      }
+      else {
+        $default_value = $form['locked'][$package][$key]['enable']['#default_value'];
+      }
+      if ($default_value != $module['enable']) {
+        $recent_modules[$key] = REQUEST_TIME;
+      }
+    }
+  }
+
+  variable_set('module_filter_recent_modules', $recent_modules);
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ *
+ * Only show managed modules permissions.
+ */
+function module_permissions_form_user_admin_permissions_handler(&$form) {
+  // Retrieve role names for columns.
+  $role_names = user_roles();
+  // Fetch permissions for all roles or the one selected role.
+  $role_permissions = user_role_permissions($role_names);
+
+  // Reset form permission.
+  if (isset($form['permission'])) {
+    unset($form['permission']);
+  }
+  $form['permission'] = array();
+
+  // Render role/permission overview.
+  $options = array();
+  $module_info = system_get_info('module');
+  $hide_descriptions = system_admin_compact_mode();
+  $managed_modules = module_permissions_managed_modules_load();
+  if (empty($managed_modules)) {
+    drupal_set_message(t('Managed module permission list is empty. Please contact your site administrator.'), 'status');
+  }
+  $modules = array();
+  foreach (module_implements('permission') as $module) {
+    if (isset($managed_modules[$module])) {
+      $modules[$module] = $module_info[$module]['name'];
+    }
+  }
+  // Sort the list.
+  asort($modules);
+
+  foreach ($modules as $module => $display_name) {
+    if ($permissions = module_invoke($module, 'permission')) {
+      $form['permission'][] = array(
+        '#markup' => $module_info[$module]['name'],
+        '#id' => $module,
+      );
+      foreach ($permissions as $perm => $perm_item) {
+        // Fill in default values for the permission.
+        $perm_item += array(
+          'description' => '',
+          'restrict access' => FALSE,
+          'warning' => !empty($perm_item['restrict access']) ? t('Warning: Give to trusted roles only; this permission has security implications.') : '',
+        );
+        $options[$perm] = '';
+        $perm_description = theme('user_permission_description',
+          array(
+            'permission_item' => $perm_item,
+            'hide' => $hide_descriptions,
+          )
+        );
+        $form['permission'][$perm] = array(
+          '#type' => 'item',
+          '#markup' => $perm_item['title'],
+          '#description' => $perm_description,
+        );
+        // Build arrays for roles.
+        foreach ($role_names as $rid => $name) {
+          // Builds arrays for checked boxes for each role.
+          if (isset($role_permissions[$rid][$perm])) {
+            $status[$rid][] = $perm;
+          }
+        }
+      }
+    }
+  }
+
+  // Have to build checkboxes here after checkbox arrays are built.
+  foreach ($role_names as $rid => $name) {
+    $form['checkboxes'][$rid] = array(
+      '#type' => 'checkboxes',
+      '#options' => $options,
+      '#default_value' => isset($status[$rid]) ? $status[$rid] : array(),
+      '#attributes' => array('class' => array('rid-' . $rid)),
+    );
+    $form['role_names'][$rid] = array(
+      '#markup' => check_plain($name),
+      '#tree' => TRUE,
+    );
+  }
+}
+
+/**
+ * Form submission callback.
+ */
+function module_permissions_logs_submit(&$form, &$form_state) {
+  if (!empty($form_state['__module_permissions_log_logged'])) {
+    // Some forms are submitted twice, for instance the node_form.
+    // We will only call the submit callback once.
+    return;
+  }
+
+  $form_state['__module_permissions_log_logged'] = TRUE;
+
+  global $user;
+  // Get form id.
+  $form_id = $form['#form_id'];
+
+  if ($form_id === 'user_admin_permissions') {
+    foreach ($form_state['values']['role_names'] as $rid => $name) {
+      // Grant new permissions for the role.
+      $grant = array_filter($form_state['values'][$rid]);
+      if (!empty($grant)) {
+        watchdog('module_permissions', 'User %name granted following permissions %permissions from role %rid on %form_id page', array(
+          '%name' => $user->name,
+          '%permissions' => implode(',', array_keys($grant)),
+          '%rid' => $rid,
+          '%form_id' => $form_id,
+        ));
+      }
+      // Revoke permissions for the role.
+      $revoke = array_diff_assoc($form_state['values'][$rid], $grant);
+      if (!empty($revoke)) {
+        watchdog('module_permissions', 'User %name revoked following permissions "%permissions" from role %rid on %form_id page', array(
+          '%name' => $user->name,
+          '%permissions' => implode(',', array_keys($revoke)),
+          '%rid' => $rid,
+          '%form_id' => $form_id,
+        ));
+      }
+    }
+  }
+  elseif ($form_id === 'system_modules') {
+    foreach ($form_state['values']['modules'] as $package => $modules) {
+      foreach ($modules as $key => $module) {
+        if (isset($form['modules'][$package][$key]['enable']['#default_value'])) {
+          $default_value = $form['modules'][$package][$key]['enable']['#default_value'];
+        }
+        else {
+          $default_value = $form['locked'][$package][$key]['enable']['#default_value'];
+        }
+        if ($default_value != $module['enable']) {
+          if ($module['enable']) {
+            $recent_modules[] = t('enable @module', array('@module' => $key));
+          }
+          else {
+            $recent_modules[] = t('disable @module', array('@module' => $key));
+          }
+        }
+      }
+    }
+    if (!empty($recent_modules)) {
+      watchdog('module_permissions', 'User %name performed following actions "%modules" on %form_id page', array(
+        '%name' => $user->name,
+        '%modules' => implode(',', $recent_modules),
+        '%form_id' => $form_id,
+      ));
+    }
+  }
+}
+
+/**
+ * Get managed modules list.
+ */
+function module_permissions_managed_modules_load() {
+  $managed_modules = &drupal_static(__FUNCTION__);
+
+  if (!isset($managed_modules)) {
+    $managed_modules = variable_get('module_permissions_managed_modules', array());
+    $managed_modules = array_flip($managed_modules);
+  }
+
+  return $managed_modules;
+}
+
+/**
+ * Implements hook_theme().
+ */
+function module_permissions_theme() {
+  return array(
+    'module_permissions_managed_modules_list' => array(
+      'render element' => 'form',
+      'file' => 'includes/module_permissions.theme.inc',
+    ),
+  );
+}

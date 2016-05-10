@@ -36,3 +36,24 @@ function clamav_requirements($phase) {
   }
   return $requirements;
 }
+
+/**
+ * Implements hook_uninstall().
+ */
+function clamav_uninstall() {
+  variable_del('clamav_verbose');
+  variable_del('clamav_executable_path');
+  variable_del('clamav_daemon_port');
+  variable_del('clamav_daemon_host');
+  variable_del('clamav_mode');
+  variable_del('clamav_enabled');
+  variable_del('clamav_unchecked_files');
+}
+
+/**
+ * Remove deprecated variables.
+ */
+function clamav_update_7001() {
+  variable_del('clamav_enable_element_file_widget');
+  variable_del('clamav_enable_element_image_widget');
+}

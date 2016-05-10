@@ -151,7 +151,7 @@
       str += ' autoplay:' + params.autoplay;
     }
     else {
-      str += ' autoplay:0';
+      str += ' autoplay:' + '0';
     }
     str += ']';
 

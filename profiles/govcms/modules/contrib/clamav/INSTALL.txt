@@ -6,7 +6,10 @@ Requirements
    scanner.
 2. Download/install ClamAV:
   - [Debian / Ubuntu]: apt-get install clamav
-  - [redhat / CentOS]: yum install clamav
+  - [redhat / CentOS]:
+    1. Enable the EPEL repo (https://fedoraproject.org/wiki/EPEL)
+    2. yum install clamav
+    3. yum install clamd
 
 Installation
 ------------

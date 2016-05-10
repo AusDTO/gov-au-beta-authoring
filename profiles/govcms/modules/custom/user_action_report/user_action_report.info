@@ -8,9 +8,9 @@ dependencies[] = event_log_auth
 dependencies[] = event_log_node_alt
 dependencies[] = event_log_user_alt
 
-; Information added by Drupal.org packaging script on 2016-02-24
-version = "7.x-2.0-beta9"
+; Information added by Drupal.org packaging script on 2016-05-10
+version = "7.x-2.0"
 core = "7.x"
 project = "govcms"
-datestamp = "1456358343"
+datestamp = "1462844953"
 

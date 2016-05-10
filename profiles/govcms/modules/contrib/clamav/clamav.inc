@@ -164,6 +164,7 @@ function _clamav_scan_via_exec($filepath, $filename) {
     return CLAMAV_SCANRESULT_UNCHECKED;
   }
 
+  $filepath = drupal_realpath($filepath);
   // using 2>&1 to grab the full command-line output.
   $cmd = escapeshellcmd($executable) . ' ' . escapeshellarg($filepath) . ' 2>&1';
 
@@ -180,6 +181,11 @@ function _clamav_scan_via_exec($filepath, $filename) {
    * clamscan return values (documented from man clamscan)
    *  0 : No virus found.
    *  1 : Virus(es) found.
+   *  2 : Some error(s) occured
+   *
+   * Specific return codes below retained for backwards-compatibilty
+   *   (with very old versions of clamscan < 0.96)
+   *
    * 40: Unknown option passed.
    * 50: Database initialization error.
    * 52: Not supported file type.
@@ -204,16 +210,16 @@ function _clamav_scan_via_exec($filepath, $filename) {
       return CLAMAV_SCANRESULT_CLEAN;
 
     case 1:
-      // pass each line of the exec output through checkplain.
-      // The t operator ! is used instead of @, because <br /> tags are being added.
-      foreach ($output as $key => $line) {
-        $output[$key] = check_plain($line);
-      }
-      watchdog('clamav', 'Virus detected in uploaded file %filename.  Clamscan reported:<br />!clamscan_output', array('%filename' => $filename, '!clamscan_output' => implode('<br />', $output)), WATCHDOG_CRITICAL);
+      watchdog('clamav', 'Virus detected in uploaded file %filename. Clamscan reported:<br />!clamscan_output',
+          array(
+            '%filename' => $filename,
+            '!clamscan_output' => _clamav_sanitise_output($output),
+          ), WATCHDOG_CRITICAL);
       return CLAMAV_SCANRESULT_INFECTED;
 
     default:
       $descriptions = array(
+         2 => "Some error(s) occured.",
         40 => "Unknown option passed.",
         50 => "Database initialization error.",
         52 => "Not supported file type.",
@@ -231,11 +237,33 @@ function _clamav_scan_via_exec($filepath, $filename) {
       );
       $description = (array_key_exists($result, $descriptions)) ? $descriptions[$result] : 'unknown error';
 
-      watchdog('clamav', 'Uploaded file %filename could not be scanned.  Clamscan reported: [@error_code] - @error_description', array('%filename' => $filename, '@error_code' => $result, '@error_description' => $description), WATCHDOG_WARNING);
+      watchdog('clamav', 'Uploaded file %filename could not be scanned. Clamscan reported: [@error_code] - @error_description Output:<br />!clamscan_output',
+          array(
+            '%filename' => $filename,
+            '@error_code' => $result,
+            '@error_description' => $description,
+            '!clamscan_output' => _clamav_sanitise_output($output),
+           ), WATCHDOG_WARNING);
       return CLAMAV_SCANRESULT_UNCHECKED;
   }
 }
 
+/**
+ * Sanitise output from clamscan.
+ *
+ * @param array $output
+ * Lines of output from clamscan executable.
+ *
+ * @return string
+ * Sanitised output.
+ */
+function _clamav_sanitise_output($output) {
+  if (!is_array($output)) {
+    $output = array($output);
+  }
+  $output = array_map('check_plain', $output);
+  return implode('<br />', $output);
+}
 
 /**
  * Get the version information for clamav.

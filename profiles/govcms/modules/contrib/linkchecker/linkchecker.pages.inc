@@ -293,21 +293,3 @@ function linkchecker_link_edit_form_submit($form, &$form_state) {
     drupal_set_message(t('The link settings for %url have been saved.', array('%url' => $form_state['values']['url'])));
   }
 }
-
-/**
- * Check if the link is an internal URL or not.
- *
- * @param object $link
- *   Link object.
- *
- * @return bool
- *   TRUE if link is internal, otherwise FALSE.
- */
-function _linkchecker_is_internal_url(&$link) {
-  global $base_url;
-
-  if (strpos($link->url, $base_url) === 0) {
-    $link->internal = trim(substr($link->url, strlen($base_url)), " \t\r\n\0\\/");
-    return TRUE;
-  }
-}

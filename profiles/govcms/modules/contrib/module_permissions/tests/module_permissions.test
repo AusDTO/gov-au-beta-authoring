@@ -1,0 +1,81 @@
+<?php
+
+/**
+ * @file
+ * Tests for the Module Permissions module.
+ */
+
+/**
+ * Base class for all Module Permissions web test cases.
+ */
+class ModulePermissionsWebTestCase extends DrupalWebTestCase {
+  protected $profile = 'testing';
+
+  protected $basePermissions = array(
+    'access administration pages',
+    'administer managed modules',
+    'administer managed modules permissions',
+  );
+
+  /**
+   * Set up test.
+   */
+  public function setUp() {
+    // Enable Module Permissions module and any other modules.
+    $modules = func_get_args();
+    $modules = isset($modules[0]) ? $modules[0] : $modules;
+    $modules[] = 'module_permissions';
+    parent::setUp($modules);
+
+    // Disable client-side caching.
+    variable_set('admin_menu_cache_client', FALSE);
+    // Disable Clean URLs to ensure drupal.org testbot compatibility.
+    variable_set('clean_url', 0);
+  }
+
+}
+
+/**
+ * Tests menu links depending on user permissions.
+ */
+class ModulePermissionsTestCase extends ModulePermissionsWebTestCase {
+  /**
+   * Register test task info.
+   */
+  public static function getInfo() {
+    return array(
+      'name' => 'Enable/disable modules',
+      'description' => 'Tests Enable/disable managed modules.',
+      'group' => 'Module Permissions',
+    );
+  }
+
+  /**
+   * Test enable/disable module.
+   */
+  public function testEnableDisable() {
+    $this->admin_user = $this->drupalCreateUser(array('access administration pages', 'administer managed modules'));
+    $this->drupalLogin($this->admin_user);
+
+    $modules = system_rebuild_module_data();
+    foreach ($modules as $name => $module) {
+      if ($module->info['package'] != 'Core' || !empty($module->info['hidden']) || !empty($module->info['required'])) {
+        unset($modules[$name]);
+      }
+    }
+
+    // Include core modules for testing.
+    variable_set('module_permissions_exclude_core', 0);
+    variable_set('module_permissions_managed_modules', array_keys($modules));
+
+    $this->assertTrue(count($modules), format_string('Found @count core modules that we can try to enable in this test.', array('@count' => count($modules))));
+
+    $edit = array();
+    foreach (array_keys($modules) as $name) {
+      $edit['modules[Core][' . $name . '][enable]'] = $name;
+    }
+    $this->drupalPost('admin/modules', $edit, t('Save configuration'));
+    $this->assertText(t('The configuration options have been saved.'), 'Modules status has been updated.');
+  }
+
+}

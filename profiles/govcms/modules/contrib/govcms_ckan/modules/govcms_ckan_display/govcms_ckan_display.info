@@ -1,0 +1,12 @@
+name = govCMS CKAN Display
+description = Handles turning tabular data into charts, downloading charts and input filters.
+package = govCMS
+core = 7.x
+dependencies[] = govcms_ckan
+
+; Information added by Drupal.org packaging script on 2016-04-21
+version = "7.x-1.0"
+core = "7.x"
+project = "govcms_ckan"
+datestamp = "1461206806"
+

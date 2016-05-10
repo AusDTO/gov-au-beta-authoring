@@ -83,8 +83,11 @@ dependencies[] = media_wysiwyg
 dependencies[] = menu_block
 dependencies[] = menu_block_export
 dependencies[] = metatag
+dependencies[] = minisite
 dependencies[] = module_filter
+dependencies[] = module_permissions
 dependencies[] = navbar
+dependencies[] = openaccess
 dependencies[] = panels
 dependencies[] = panels_ipe
 dependencies[] = password_policy
@@ -98,6 +101,7 @@ dependencies[] = redirect
 dependencies[] = robotstxt
 dependencies[] = strongarm
 dependencies[] = token
+dependencies[] = token_tweaks
 dependencies[] = transliteration
 dependencies[] = views_content
 dependencies[] = search404
@@ -186,9 +190,9 @@ dependencies[] = govcms_tags
 ; Search
 dependencies[] = govcms_search_core
 
-; Information added by Drupal.org packaging script on 2016-02-24
-version = "7.x-2.0-beta9"
+; Information added by Drupal.org packaging script on 2016-05-10
+version = "7.x-2.0"
 core = "7.x"
 project = "govcms"
-datestamp = "1456358343"
+datestamp = "1462844953"
 

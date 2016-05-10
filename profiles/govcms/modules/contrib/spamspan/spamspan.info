@@ -14,9 +14,9 @@ files[] = spamspan.test
 ; load javascript on every page
 scripts[] = spamspan.js
 
-; Information added by drush on 2016-02-24
+; Information added by drush on 2016-05-10
 version = "7.x-1.2+14-dev"
 core = "7.x"
 project = "spamspan"
-datestamp = "1456358387"
+datestamp = "1462845007"
 

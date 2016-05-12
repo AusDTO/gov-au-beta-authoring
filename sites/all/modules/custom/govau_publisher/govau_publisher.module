@@ -19,21 +19,20 @@ function govau_publisher_menu()
         'type' => MENU_NORMAL_ITEM,
     );
 
-    $items['api/node/%'] = array(
+    $items['api/node/%/%'] = array(
         'title' => 'Node as JSON for GOV.AU access',
         'page callback' => 'govau_publisher_node_json',
-        'page arguments' => array(2),
+        'page arguments' => array(2,3),
         'access arguments' => array('access content'),
         'type' => MENU_CALLBACK,
     );
     return $items;
 }
 
-function govau_publisher_node_json($id)
+function govau_publisher_node_json($nid, $vid)
 {
-    $node = node_load($id);
-    if ($node && $node->status) {
-        // current revision is published revision
+    $node = node_load($nid, $vid);
+    if ($node) {
         drupal_json_output(
             json_encode_objects(
                 [govau_publisher_prepare_node($node)]
@@ -197,7 +196,7 @@ function govau_publisher_workbench_moderation_transition($node, $previous_state,
 
 
     if ($new_state == "published") {
-        $payload = json_encode(Array("updated_content" => $node->nid));
+        $payload = json_encode(Array("updated_node" => $node->nid, "updated_revision" => $node->vid));
         $url = variable_get("govau_api_url") ."/api/nodes";
         $headers = array('Content-Type' => 'application/json');
         $drupal_http_request_options = array(

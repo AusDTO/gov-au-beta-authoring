@@ -53,20 +53,23 @@ function govau_publisher_node_json($id)
 function govau_publisher_form_node_form_alter(&$form, $form_state)
 {
 if (isset($form['field_section']) && $form["#node"]->type == 'gov_au_page') {
-    // TODO add section list from GOV.AU API
     $form['field_section']['und'][0]['value']['#type'] = 'select';
-    $form['field_section']['und'][0]['value']['#options'] = array(
-        0 => t('Section A'),
-        1 => t('Section B'),
+    $url = variable_get("govau_api_url") ."/api/sections";
+    $drupal_http_request_options = array(
+        'method' => 'GET',
+        'timeout' => 15,
     );
+    $request = drupal_http_request($url, $drupal_http_request_options);
+    if (isset($request->data)) {
+        $result = json_decode($request->data, true);
+    }
 
-    $form['field_section']['und'][0]['value']['#field_suffix'] = "
-    <script>
-    jQuery('#edit-field-section-und-0-value').change(function() {
-      window.alert('hi! ' + jQuery( this ).val());
-    });
-    </script>
-    ";
+    $sections = array();
+    foreach($result as $section){
+        $sections[$section['slug']] = t($section['name']);
+    }
+
+    $form['field_section']['und'][0]['value']['#options'] = $sections;
 
     $form['field_template']['und'][0]['value']['#type'] = 'select';
     $url = variable_get("govau_api_url") ."/api/templates";

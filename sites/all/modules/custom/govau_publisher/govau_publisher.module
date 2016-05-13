@@ -65,7 +65,7 @@ if (isset($form['field_section']) && $form["#node"]->type == 'gov_au_page') {
 
     $sections = array();
     foreach($result as $section){
-        $sections[$section['slug']] = t($section['name']);
+        $sections["{$section['id']}"] = t($section['name']);
     }
 
     $form['field_section']['und'][0]['value']['#options'] = $sections;

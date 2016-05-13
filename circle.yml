@@ -121,5 +121,5 @@ deployment:
     branch: master
     commands:
       - chmod -Rv 755 sites/default/
-      - cp $DOCROOT/sites/default/default.settings.php $DOCROOT/sites/default/settings.php
+      - cp $DOCROOT/sites/default/cloudfoundry-default.settings.php $DOCROOT/sites/default/settings.php
       - cf push gov-au-authoring

@@ -113,7 +113,7 @@ if (isset($form['field_section']) && $form["#node"]->type == 'gov_au_page') {
 
 function govau_publisher_admin_form()
 {
-    $form = array();
+    $form = array('#validate' => Array('govau_publisher_admin_validate'));
     $form['govau_api_url'] = array(
         '#type' => 'textfield',
         '#title' => t('GOV.AU API URL'),
@@ -122,6 +122,7 @@ function govau_publisher_admin_form()
         '#maxlength' => 255,
         '#description' => t("GOV.AU API URL"),
         '#required' => TRUE,
+
     );
 
     return system_settings_form($form);
@@ -129,8 +130,12 @@ function govau_publisher_admin_form()
 
 function govau_publisher_admin_validate($form, &$form_state)
 {
-
-
+    if (!(strpos($form_state['values']['govau_api_url'], "http") !== FALSE)) {
+        form_set_error('govau_api_url', "GOV.AU API URL must include protocol http(s)");
+    }
+    if (substr($form_state['values']['govau_api_url'],-1) == "/") {
+        form_set_error('govau_api_url', "GOV.AU API URL cannot have trailing slash");
+    }
 }
 
 /**

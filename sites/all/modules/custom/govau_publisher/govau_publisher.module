@@ -22,7 +22,7 @@ function govau_publisher_menu()
     $items['api/node/%/%'] = array(
         'title' => 'Node as JSON for GOV.AU access',
         'page callback' => 'govau_publisher_node_json',
-        'page arguments' => array(2,3),
+        'page arguments' => array(2, 3),
         'access arguments' => array('access content'),
         'type' => MENU_CALLBACK,
     );
@@ -51,49 +51,49 @@ function govau_publisher_node_json($nid, $vid)
  */
 function govau_publisher_form_node_form_alter(&$form, $form_state)
 {
-if (isset($form['field_section']) && $form["#node"]->type == 'gov_au_page') {
-    $form['field_section']['und'][0]['value']['#type'] = 'select';
-    $url = variable_get("govau_api_url") ."/api/sections";
-    $drupal_http_request_options = array(
-        'method' => 'GET',
-        'timeout' => 15,
-    );
-    $request = drupal_http_request($url, $drupal_http_request_options);
-    if (isset($request->data)) {
-        $result = json_decode($request->data, true);
-    }
-
-    $sections = array();
-    foreach($result as $section){
-        $sections["{$section['id']}"] = t($section['name']);
-    }
-
-    $form['field_section']['und'][0]['value']['#options'] = $sections;
-
-    $form['field_template']['und'][0]['value']['#type'] = 'select';
-    $url = variable_get("govau_api_url") ."/api/templates";
-    $drupal_http_request_options = array(
-        'method' => 'GET',
-        'timeout' => 15,
-    );
-
-    $request = drupal_http_request($url, $drupal_http_request_options);
-    if (isset($request->data)) {
-        $result = json_decode($request->data, true);
-    }
-
-    $templates = array();
-    $template_attrs = array();
-    foreach($result as $key => $val){
-        $templates[$key] = t($val['name']);
-        $template_attrs[$key] = array(
-          'data-image-preview' => variable_get("govau_api_url").$val['image']
+    if (isset($form['field_section']) && $form["#node"]->type == 'gov_au_page') {
+        $form['field_section']['und'][0]['value']['#type'] = 'select';
+        $url = variable_get("govau_api_url") . "/api/sections";
+        $drupal_http_request_options = array(
+            'method' => 'GET',
+            'timeout' => 15,
         );
-    }
-    $form['field_template']['und'][0]['value']['#options'] = $templates;
-    $form['field_template']['und'][0]['value']['#options_attributes'] = $template_attrs;
+        $request = drupal_http_request($url, $drupal_http_request_options);
+        if (isset($request->data)) {
+            $result = json_decode($request->data, true);
+        }
 
-    $form['field_template']['und'][0]['value']['#field_suffix'] = "
+        $sections = array();
+        foreach ($result as $section) {
+            $sections["{$section['id']}"] = t($section['name']);
+        }
+
+        $form['field_section']['und'][0]['value']['#options'] = $sections;
+
+        $form['field_template']['und'][0]['value']['#type'] = 'select';
+        $url = variable_get("govau_api_url") . "/api/templates";
+        $drupal_http_request_options = array(
+            'method' => 'GET',
+            'timeout' => 15,
+        );
+
+        $request = drupal_http_request($url, $drupal_http_request_options);
+        if (isset($request->data)) {
+            $result = json_decode($request->data, true);
+        }
+
+        $templates = array();
+        $template_attrs = array();
+        foreach ($result as $key => $val) {
+            $templates[$key] = t($val['name']);
+            $template_attrs[$key] = array(
+                'data-image-preview' => variable_get("govau_api_url") . $val['image']
+            );
+        }
+        $form['field_template']['und'][0]['value']['#options'] = $templates;
+        $form['field_template']['und'][0]['value']['#options_attributes'] = $template_attrs;
+
+        $form['field_template']['und'][0]['value']['#field_suffix'] = "
         <img id='template-preview' height='50' width='50'>
         <script>
           jQuery('#template-preview').attr('src', jQuery('option:selected', jQuery('#edit-field-template-und-0-value')).attr('data-image-preview'));
@@ -105,9 +105,9 @@ if (isset($form['field_section']) && $form["#node"]->type == 'gov_au_page') {
 
     ";
 
-    $form['field_section']['und'][0]['value']['#size'] = 1;
-    $form['field_template']['und'][0]['value']['#size'] = 1;
-}
+        $form['field_section']['und'][0]['value']['#size'] = 1;
+        $form['field_template']['und'][0]['value']['#size'] = 1;
+    }
 
 }
 
@@ -133,7 +133,7 @@ function govau_publisher_admin_validate($form, &$form_state)
     if (!(strpos($form_state['values']['govau_api_url'], "http") !== FALSE)) {
         form_set_error('govau_api_url', "GOV.AU API URL must include protocol http(s)");
     }
-    if (substr($form_state['values']['govau_api_url'],-1) == "/") {
+    if (substr($form_state['values']['govau_api_url'], -1) == "/") {
         form_set_error('govau_api_url', "GOV.AU API URL cannot have trailing slash");
     }
 }
@@ -202,7 +202,7 @@ function govau_publisher_workbench_moderation_transition($node, $previous_state,
 
     if ($new_state == "published") {
         $payload = json_encode(Array("updated_node" => $node->nid, "updated_revision" => $node->vid));
-        $url = variable_get("govau_api_url") ."/api/nodes";
+        $url = variable_get("govau_api_url") . "/api/nodes";
         $headers = array('Content-Type' => 'application/json');
         $drupal_http_request_options = array(
             'method' => 'POST',
@@ -221,7 +221,11 @@ function govau_publisher_workbench_moderation_transition($node, $previous_state,
             //or !isset($result) or empty($result)
         ) {
             //fail
-            drupal_set_message('Failed submitted to GOV.AU.', 'error');
+            drupal_set_message('Failed submission to GOV.AU.', 'error');
+            watchdog('govau_publisher', 'Failed submission to GOV.AU. ' . json_encode($request), NULL, WATCHDOG_ERROR);
+            if (class_exists('Rollbar')) {
+                Rollbar::report_message('Failed submission to GOV.AU. ', Level::ERROR, array("data" => json_encode($request)));
+            }
             workbench_moderation_moderate($node, $previous_state);
         } else //
             drupal_set_message('Submitted to GOV.AU.');

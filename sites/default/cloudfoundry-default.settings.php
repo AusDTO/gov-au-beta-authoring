@@ -613,3 +613,16 @@ $conf['404_fast_html'] = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML+RDFa 1.0//EN"
         'collation' => 'utf8_general_ci',
     );
 }
+
+
+
+require_once 'sites/default/rollbar.php'; 
+$config = array(
+    // required
+    'access_token' => $_ENV['ROLLBAR_API_KEY'],
+    // optional - environment name. any string will do.
+    'environment' => 'production',
+    // optional - path to directory your code is in. used for linking stack traces.
+    'root' => $_ENV['PWD'] 
+);
+Rollbar::init($config);

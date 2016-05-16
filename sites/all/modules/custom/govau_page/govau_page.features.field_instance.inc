@@ -10,7 +10,7 @@
 function govau_page_field_default_field_instances() {
   $field_instances = array();
 
-  // Exported field_instance: 'node-gov_au_page-body'
+  // Exported field_instance: 'node-gov_au_page-body'.
   $field_instances['node-gov_au_page-body'] = array(
     'bundle' => 'gov_au_page',
     'default_value' => NULL,
@@ -60,7 +60,56 @@ function govau_page_field_default_field_instances() {
     ),
   );
 
-  // Exported field_instance: 'node-gov_au_page-field_section'
+  // Exported field_instance: 'node-gov_au_page-field_parent'.
+  $field_instances['node-gov_au_page-field_parent'] = array(
+    'bundle' => 'gov_au_page',
+    'default_value' => NULL,
+    'deleted' => 0,
+    'description' => '',
+    'display' => array(
+      'compact' => array(
+        'label' => 'above',
+        'settings' => array(),
+        'type' => 'hidden',
+        'weight' => 0,
+      ),
+      'default' => array(
+        'label' => 'above',
+        'module' => 'entityreference',
+        'settings' => array(
+          'link' => FALSE,
+        ),
+        'type' => 'entityreference_label',
+        'weight' => 3,
+      ),
+      'teaser' => array(
+        'label' => 'above',
+        'settings' => array(),
+        'type' => 'hidden',
+        'weight' => 0,
+      ),
+    ),
+    'entity_type' => 'node',
+    'field_name' => 'field_parent',
+    'label' => 'Parent',
+    'required' => 0,
+    'settings' => array(
+      'user_register_form' => FALSE,
+    ),
+    'widget' => array(
+      'active' => 1,
+      'module' => 'entityreference',
+      'settings' => array(
+        'match_operator' => 'CONTAINS',
+        'path' => '',
+        'size' => 60,
+      ),
+      'type' => 'entityreference_autocomplete',
+      'weight' => 8,
+    ),
+  );
+
+  // Exported field_instance: 'node-gov_au_page-field_section'.
   $field_instances['node-gov_au_page-field_section'] = array(
     'bundle' => 'gov_au_page',
     'default_value' => NULL,
@@ -111,7 +160,7 @@ function govau_page_field_default_field_instances() {
     ),
   );
 
-  // Exported field_instance: 'node-gov_au_page-field_template'
+  // Exported field_instance: 'node-gov_au_page-field_template'.
   $field_instances['node-gov_au_page-field_template'] = array(
     'bundle' => 'gov_au_page',
     'default_value' => NULL,
@@ -159,6 +208,7 @@ function govau_page_field_default_field_instances() {
   // Translatables
   // Included for use with string extractors like potx.
   t('Body');
+  t('Parent');
   t('Section');
   t('Template');
 

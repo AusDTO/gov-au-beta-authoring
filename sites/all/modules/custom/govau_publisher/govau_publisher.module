@@ -232,5 +232,66 @@ function govau_publisher_workbench_moderation_transition($node, $previous_state,
         // success
     }
 
+}
 
+function govau_publisher_block_info() {
+    $blocks = array();
+    $blocks['govau_publisher'] = array(
+        'info' => t('GOVAU Content Linting'),
+    );
+    return $blocks;
+}
+
+
+function govau_publisher_block_view($delta = '') {
+    $block = array();
+
+    switch ($delta) {
+        case 'govau_publisher':
+            $block['subject'] = 'GOVAU Content Linter';
+            $block['content'] = _govau_publisher_CONTENT();
+            break;
+    }
+    return $block;
+}
+
+
+function _govau_publisher_CONTENT() {
+    $node = menu_get_object();
+
+    if(arg(2) == 'draft'){
+        # Load current revision if viewing a draft
+        $node = workbench_moderation_node_current_load($node);
+    }
+
+    $output = t('No linting errors');
+    $url = variable_get('govau_api_url') . '/api/linters';
+    $payload = json_encode(Array('content' => $node->{'body'}['und'][0]['value']));
+    $headers = array('Content-Type' => 'application/json');
+
+    $drupal_http_request_options = array(
+        'method' => 'POST',
+        'data' => $payload,
+        'timeout' => 15,
+        'headers' => $headers
+    );
+
+    $request = drupal_http_request($url, $drupal_http_request_options);
+    $html = str_get_html($node->{'body'}["und"][0]["value"]);
+
+    if(isset($request->data)){
+        $result = json_decode($request->data, true);
+
+        if(count($result) > 0){
+            foreach($result as $key => $val){
+                $html = str_replace($key, "<span style='background-color:yellow' title='{$val}'>{$key}</span>", $html);
+            }
+            $output = $html;
+        }
+
+    } else {
+        $output = t('Linting information could not be retrieved from GOVAU');
+    }
+
+    return "<div style='background-color:lavender'>{$output}</div>";
 }

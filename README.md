@@ -21,6 +21,36 @@ To enable xdebug, uncomment the xdebug zend_extension line in /Applications/DevD
     xdebug.remote_port = 9000
     xdebug.remote_handler = dbgp
     xdebug.remote_mode = req
+
+# Configuration
+
+You will need to configure several parts of Drupal in order to work with GOV.AU. 
+
+These settings can be found under `Home > Administration > Configuration > Content Authoring > GOV.AU Push module settings`
+
+## GOVAU API URLS
+
+You will need to set the following:
+
+**GOV.AU API URL**
+
+This is required for Drupal to notify GOVAU of content changes. This should be set to the URL of the core GOV.AU service.
+
+**GOV.AU Content Analysis API URL**
+
+This is required for Drupal's GOV.AU Content Linting block (or any other content analysis feature). This should be set to the URL of the GOV.AU content analysis service.
+
+## GOV.AU Content Quality Block
+
+This is required to display the content analysis block onto a node's view.
+
+This can be found under `Home > Administration > Structure > Blocks`
+
+## GOVAU Content Linting
+
+Move the block from the available list of blocks to under 'Main page content' under the Content section.
+
+
     
 # TODO
 Manage versioning of module and send version in any responses

@@ -9,8 +9,8 @@ This is GovCMS/Drupal with an added module [govau_push](https://github.com/AusDT
 This experiment is intentionally simplistic and minimises dependencies. For example it does not use the [Content Hub](https://www.acquia.com/gb/products-services/acquia-content-hub).
 
 # Development Setup
-Quickest setup is to use [Acquia Dev Desktop](https://www.acquia.com/downloads) and use the "Start with an existing site on my local computer" option.
-
+Quickest setup is to use [Acquia Dev Desktop](https://www.acquia.com/downloads) and use the "Start with an existing site on my local computer" option, then go to http://gov-au-beta-authoring.dd:8083/install.php to do the initial setup.
+ 
 Then after installation, go to http://gov-au-beta-authoring.dd:8083/admin/modules and enable GOV.AU Publisher/Page.
 
 To enable xdebug, uncomment the xdebug zend_extension line in /Applications/DevDesktop/php5_5/bin/php.ini and add configuration:

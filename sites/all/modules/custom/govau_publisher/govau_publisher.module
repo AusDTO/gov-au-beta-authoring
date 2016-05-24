@@ -274,7 +274,7 @@ function _govau_publisher_CONTENT() {
     }
 
     $output = t('No linting errors');
-    $url = variable_get('govau_content_analysis_api_url') . '/api/linters';
+    $url = variable_get('govau_content_analysis_api_url') . '/api/linters.json';
     $payload = json_encode(Array('content' => $node->{'body'}['und'][0]['value']));
     $headers = array('Content-Type' => 'application/json');
 

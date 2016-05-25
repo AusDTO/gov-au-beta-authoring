@@ -56,7 +56,7 @@ function govau_page_field_default_field_instances() {
         'summary_rows' => 5,
       ),
       'type' => 'text_textarea_with_summary',
-      'weight' => 6,
+      'weight' => 7,
     ),
   );
 
@@ -105,7 +105,7 @@ function govau_page_field_default_field_instances() {
         'size' => 60,
       ),
       'type' => 'entityreference_autocomplete',
-      'weight' => 8,
+      'weight' => 3,
     ),
   );
 

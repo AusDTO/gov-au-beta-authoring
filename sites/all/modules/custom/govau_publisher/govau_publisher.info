@@ -2,6 +2,7 @@ name = GOV.AU Publisher
 description = Prepare and post content for GOV.AU API
 core = 7.x
 dependencies[] = govau_page
+dependencies[] = govau_moderation
 dependencies[] = node_export
 dependencies[] = log_stdout
 dependencies[] = form_options_attributes

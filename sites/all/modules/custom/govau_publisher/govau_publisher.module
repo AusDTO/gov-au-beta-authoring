@@ -26,6 +26,14 @@ function govau_publisher_menu()
         'access arguments' => array('access content'),
         'type' => MENU_CALLBACK,
     );
+
+    $items['api/node/result/%/%'] = array(
+        'title' => 'Notify result of GOV.AU publish attempt',
+        'page callback' => 'govau_publisher_publish_result',
+        'page arguments' => array(3, 4),
+        'access arguments' => array('access content'),
+        'type' => MENU_CALLBACK,
+    );
     return $items;
 }
 
@@ -42,6 +50,26 @@ function govau_publisher_node_json($nid, $vid)
     } else {
         // no published revision
         drupal_not_found();
+        return;
+    }
+}
+
+function govau_publisher_publish_result($nid, $vid)
+{
+    $node = node_load($nid, $vid);
+    if ($node) {
+        if ($_POST['success'] == 'true') {
+            $new_state = 'published';
+        } else {
+            $new_state = 'draft';
+        }
+        workbench_moderation_moderate($node, $new_state);
+
+        drupal_json_output(array('new_state' => $new_state));
+    }
+    else {
+        drupal_add_http_header('status', 404);
+        drupal_json_output(array("error" => "Object not found ($nid, $vid)"));
         return;
     }
 }
@@ -209,7 +237,7 @@ function govau_publisher_workbench_moderation_transition($node, $previous_state,
 {// Acceptable server response codes.
 
 
-    if ($new_state == "published") {
+    if ($new_state == "publish_pending") {
         $payload = json_encode(Array("updated_node" => $node->nid, "updated_revision" => $node->vid));
         $url = variable_get("govau_api_url") . "/api/nodes";
         $headers = array('Content-Type' => 'application/json');

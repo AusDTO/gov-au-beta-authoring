@@ -68,19 +68,19 @@ function govau_page_strongarm() {
     'extra_fields' => array(
       'form' => array(
         'metatags' => array(
-          'weight' => '8',
+          'weight' => '7',
         ),
         'title' => array(
           'weight' => '0',
         ),
         'path' => array(
-          'weight' => '6',
+          'weight' => '5',
         ),
         'redirect' => array(
-          'weight' => '4',
+          'weight' => '3',
         ),
         'xmlsitemap' => array(
-          'weight' => '5',
+          'weight' => '4',
         ),
       ),
       'display' => array(),

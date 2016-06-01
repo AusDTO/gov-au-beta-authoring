@@ -10,7 +10,6 @@ dependencies[] = features
 dependencies[] = govcms_common_fields
 dependencies[] = strongarm
 dependencies[] = text
-dependencies[] = fe_block
 features[ctools][] = strongarm:strongarm:1
 features[fe_block_settings][] = govau_publisher-govau_publisher
 features[features_api][] = api:2

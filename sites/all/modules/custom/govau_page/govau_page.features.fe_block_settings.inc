@@ -17,7 +17,9 @@ function govau_page_default_fe_block_settings() {
     'custom' => 0,
     'delta' => 'govau_publisher',
     'module' => 'govau_publisher',
-    'node_types' => array(),
+    'node_types' => array(
+      0 => 'gov_au_page',
+    ),
     'pages' => '',
     'roles' => array(),
     'themes' => array(

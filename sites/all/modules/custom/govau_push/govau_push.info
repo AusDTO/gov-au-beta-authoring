@@ -1,7 +1,0 @@
-name = DEPRECATED GOV.AU Push
-description = DEPRECATED Post content to GOV.AU API
-core = 7.x
-dependencies[] = rules
-dependencies[] = node_export
-package = GOV.AU
-configure = admin/config/content/govau_push

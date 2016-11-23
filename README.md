@@ -56,7 +56,19 @@ This can be found under `Home > Administration > Structure > Blocks`
 
 Move the block from the available list of blocks to under 'Main page content' under the Content section.
 
+## Plugins
 
+### restful
+
+https://ftp.drupal.org/files/projects/restful-7.x-2.10.tar.gz
+
+### Plug
+
+https://ftp.drupal.org/files/projects/plug-7.x-1.1.tar.gz
+
+### Registry Autoload
+
+https://ftp.drupal.org/files/projects/registry_autoload-7.x-1.3.tar.gz
     
 # TODO
 Manage versioning of module and send version in any responses

@@ -1,7 +1,0 @@
-<?php
-/**
- * @file
- * Code for the GOV.AU Page feature.
- */
-
-include_once 'govau_page.features.inc';
